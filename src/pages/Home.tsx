@@ -23,8 +23,9 @@ import '../App.css';
 const CONFIG = {
   urls: {
     acessarSistema: "/login",
-    logoPublicPath: "/imgs/Logotipos coloridos_07.png",
-    favicon: "/imgs/Logotipos coloridos_07.png"
+    logoPublicPath: "/imgs/Logotipo_Perfil Instagram 01.png",
+    footerLogoPath: "/imgs/Logotipo_Perfil Instagram 01.png",
+    favicon: "/imgs/Logotipo_Perfil Instagram 01.png"
   },
   
   navItems: [
@@ -36,8 +37,8 @@ const CONFIG = {
   ],
 
   hero: {
-    headline: "Soluções que movem a indústria de alimentos e bebidas",
-    subheadline: "A FoodFlow Solutions conecta conformidade, processos, pessoas e inovação aplicada para transformar a operação industrial com mais clareza, segurança e resultado.",
+    headline: "Conecte-se ao movimento.",
+    subheadline: "Soluções que movem a indústria de alimentos e bebidas. A FoodFlow Solutions conecta conformidade, processos, pessoas e inovação para transformar a operação com clareza, segurança e resultado.",
     primaryCta: "Acessar Sistema",
     secondaryCta: "Conhecer Soluções"
   },
@@ -132,15 +133,15 @@ function Home() {
   }, []);
 
   return (
-    <div className="app-container">
+    <div className="app-container home-v2-theme">
       <header className={`header ${isScrolled ? 'header-scrolled' : ''}`}>
         <div className="container header-container">
           <a href="#home" className="logo-link">
             <img 
               src={CONFIG.urls.logoPublicPath} 
               alt="FoodFlow Solutions" 
-              className="logo-image" 
-              style={{ maxHeight: '42px', width: 'auto' }}
+              className="logo-image img-logo-top" 
+              style={{ maxHeight: '48px', width: 'auto', borderRadius: '6px' }}
             />
           </a>
 
@@ -176,10 +177,10 @@ function Home() {
         </div>
       )}
 
-      <section id="home" className="hero bg-mesh">
+      <section id="home" className="hero hero-old-vibe">
         <div className="container hero-content text-center animate-fade-in">
-          <h1 className="hero-headline text-gradient-dark">{CONFIG.hero.headline}</h1>
-          <p className="hero-subheadline">{CONFIG.hero.subheadline}</p>
+          <h1 className="hero-headline text-white hero-headline-v2">{CONFIG.hero.headline}</h1>
+          <p className="hero-subheadline text-white" style={{ opacity: 0.9 }}>{CONFIG.hero.subheadline}</p>
           <div className="hero-buttons">
             <Link to={CONFIG.urls.acessarSistema} className="btn btn-primary btn-lg">
               {CONFIG.hero.primaryCta} <ArrowRight size={18} />
@@ -287,9 +288,9 @@ function Home() {
         <div className="container footer-grid">
           <div className="footer-brand">
             <img 
-              src={CONFIG.urls.logoPublicPath} 
+              src={CONFIG.urls.footerLogoPath} 
               alt="FoodFlow Solutions" 
-              style={{ maxHeight: '45px', width: 'auto', marginBottom: '1rem', filter: 'brightness(0) invert(1)' }}
+              style={{ maxHeight: '48px', width: 'auto', marginBottom: '1rem', borderRadius: '4px' }}
             />
             <p style={{ maxWidth: '250px' }}>Conectando estratégia, conformidade e processos.</p>
           </div>

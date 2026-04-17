@@ -543,3 +543,46 @@ h1, h2, h3, h4, h5, h6 {
   .rich-card-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
 }
 
+/* ==========================================
+   HOMEPAGE V2: REFINAMENTOS PONTUAIS E OLD VIBE
+   ========================================== */
+
+.home-v2-theme {
+  --color-primary: #156c96; /* Azul claro agora mais escuro e sofisticado */
+  --color-primary-light: #2b97c1;
+  --color-primary-dark: #0f4a66;
+}
+
+.hero-old-vibe {
+  background-color: var(--color-dark); /* Azul escuro predominante */
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(21, 108, 150, 0.4) 0px, transparent 55%),
+    radial-gradient(circle at 90% 80%, rgba(50, 204, 61, 0.25) 0px, transparent 55%);
+  color: var(--color-white);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Nav links e menu para branco quando header no fundo escuro sem scroll */
+.home-v2-theme .header:not(.header-scrolled) .nav-link {
+  color: var(--color-white);
+}
+
+.home-v2-theme .header:not(.header-scrolled) .mobile-menu-btn {
+  color: var(--color-white);
+}
+
+/* Refinamento da headline no hero old vibe */
+.hero-headline-v2 {
+  font-size: 3.8rem;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+@media (max-width: 768px) {
+  .hero-headline-v2 {
+    font-size: 2.8rem;
+  }
+}
+

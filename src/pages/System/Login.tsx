@@ -29,7 +29,7 @@ export default function Login() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-gray-50)' }}>
       <div className="card" style={{ maxWidth: '400px', width: '100%', borderTop: '4px solid var(--color-primary)' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img src="/imgs/Logotipos coloridos_07.png" alt="FoodFlow Solutions" style={{ height: '40px', marginBottom: '1rem' }} />
+          <img src="/imgs/Logotipo_Perfil Instagram 01.png" alt="FoodFlow Solutions" style={{ height: '48px', marginBottom: '1rem', borderRadius: '6px' }} />
           <h2 style={{ color: 'var(--color-dark)', fontSize: '1.5rem' }}>Acesso ao Sistema</h2>
           <p style={{ color: 'var(--color-gray-medium)', fontSize: '0.9rem' }}>Insira suas credenciais corporativas</p>
         </div>

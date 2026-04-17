@@ -26,7 +26,7 @@ export function SystemLayout() {
       {/* Sidebar */}
       <aside style={{ width: '250px', background: 'var(--color-dark)', color: 'var(--color-white)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <img src="/imgs/Logotipos coloridos_07.png" alt="FoodFlow" style={{ height: '35px', filter: 'brightness(0) invert(1)' }} />
+          <img src="/imgs/Logotipo_Perfil Instagram 01.png" alt="FoodFlow" style={{ height: '40px', borderRadius: '4px' }} />
         </div>
         <div style={{ padding: '1rem', flex: 1 }}>
           <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--color-gray-medium)', marginBottom: '1rem' }}>Menu</h4>
