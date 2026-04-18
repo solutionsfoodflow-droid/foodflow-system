@@ -37,7 +37,8 @@ const CONFIG = {
   ],
 
   hero: {
-    headline: "Conecte-se ao movimento.",
+    headlineBase: "Conecte-se ao ",
+    headlineHighlight: "movimento.",
     subheadline: "Soluções que movem a indústria de alimentos e bebidas. A FoodFlow Solutions conecta conformidade, processos, pessoas e inovação para transformar a operação com clareza, segurança e resultado.",
     primaryCta: "Acessar Sistema",
     secondaryCta: "Conhecer Soluções"
@@ -180,23 +181,26 @@ function Home() {
       <section id="home" className="hero hero-old-vibe">
         <div className="hero-overlay"></div>
         <div className="container hero-content text-center animate-fade-in" style={{ position: 'relative', zIndex: 10 }}>
-          <h1 className="hero-headline text-white hero-headline-v2">{CONFIG.hero.headline}</h1>
+          <h1 className="hero-headline text-white hero-headline-v2">
+            {CONFIG.hero.headlineBase}
+            <span className="text-secondary">{CONFIG.hero.headlineHighlight}</span>
+          </h1>
           <p className="hero-subheadline hero-subheadline-v2">{CONFIG.hero.subheadline}</p>
           <div className="hero-buttons">
             <Link to={CONFIG.urls.acessarSistema} className="btn btn-primary btn-lg btn-primary-v2">
               {CONFIG.hero.primaryCta} <ArrowRight size={18} />
             </Link>
-            <a href="#solucoes" className="btn btn-lg btn-outline-light">
+            <a href="#solucoes" className="btn btn-lg btn-secondary-v2">
               {CONFIG.hero.secondaryCta}
             </a>
           </div>
         </div>
       </section>
 
-      <section id="solucoes" className="section bg-gradient text-white">
+      <section id="solucoes" className="section bg-gray-50">
         <div className="container" style={{ position: 'relative', zIndex: 2 }}>
-          <h2 className="section-title text-white">{CONFIG.solucoes.sectionTitle}</h2>
-          <p className="section-subtitle" style={{ color: 'rgba(255,255,255,0.9)' }}>
+          <h2 className="section-title text-gradient-dark">{CONFIG.solucoes.sectionTitle}</h2>
+          <p className="section-subtitle">
             Eixos estratégicos sustentados por métodos aplicáveis.
           </p>
 
