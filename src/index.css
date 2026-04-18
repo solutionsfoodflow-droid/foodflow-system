@@ -576,42 +576,43 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .hero-old-vibe {
-  background-color: #0d1627; /* Fundo base azul mais profundo para máximo contraste texturizado */
+  background-color: #126388; /* Fundo base azul vibrante e institucional */
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(18, 91, 126, 0.5) 0px, transparent 65%),
-    radial-gradient(circle at 90% 80%, rgba(50, 204, 61, 0.2) 0px, transparent 65%);
+    radial-gradient(circle at 15% 10%, rgba(43, 151, 193, 0.9) 0px, transparent 65%),
+    radial-gradient(circle at 85% 90%, rgba(50, 204, 61, 0.85) 0px, transparent 65%);
   color: var(--color-white);
   position: relative;
   overflow: hidden;
   padding-top: 100px;
 }
 
-/* Overlay para afundar o fundo garantindo total legibilidade da headline/descrição */
+/* Overlay ajustado para manter a vibração do gradiente sem perder o contraste do texto */
 .hero-overlay {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(180deg, rgba(8, 14, 25, 0.8) 0%, rgba(8, 14, 25, 0.2) 100%);
+  background: linear-gradient(180deg, rgba(8, 20, 35, 0.35) 0%, rgba(8, 20, 35, 0.05) 100%);
   z-index: 1;
 }
 
-/* Ajuste e foco estético na headline */
+/* Ajuste e foco estético na headline, sombra levemente refinada para a nova luminosidade */
 .hero-headline-v2 {
   font-size: 3.8rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  text-shadow: 0 4px 30px rgba(0,0,0,0.5); /* Sombra densa para desacoplar texto do mix de cores base */
+  text-shadow: 0 4px 20px rgba(0,0,0,0.3); /* Sombra elegante e robusta sem pesar o design */
 }
 
 /* Ajuste do subtítulo - em vez de branco puro com opacity, usar gray bem leve para ser robusto */
 .hero-subheadline-v2 {
   font-size: 1.25rem;
-  color: #e2e8f0; 
+  color: #f1f5f9; 
   margin-bottom: 3rem; 
   font-weight: 400;
   max-width: 650px;
   margin-left: auto;
   margin-right: auto;
   line-height: 1.7;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.15); /* Sombra sutil para garantia de legibilidade em áreas claras do gradiente */
 }
 
 /* Ajuste específico dos CTA para acessibilidade e bom hover */
