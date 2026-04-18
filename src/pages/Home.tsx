@@ -134,7 +134,7 @@ function Home() {
 
   return (
     <div className="app-container home-v2-theme">
-      <header className={`header ${isScrolled ? 'header-scrolled' : ''}`}>
+      <header className={`header header-v2 ${isScrolled ? 'header-v2-scrolled' : ''}`}>
         <div className="container header-container">
           <a href="#home" className="logo-link">
             <img 
@@ -178,14 +178,15 @@ function Home() {
       )}
 
       <section id="home" className="hero hero-old-vibe">
-        <div className="container hero-content text-center animate-fade-in">
+        <div className="hero-overlay"></div>
+        <div className="container hero-content text-center animate-fade-in" style={{ position: 'relative', zIndex: 10 }}>
           <h1 className="hero-headline text-white hero-headline-v2">{CONFIG.hero.headline}</h1>
-          <p className="hero-subheadline text-white" style={{ opacity: 0.9 }}>{CONFIG.hero.subheadline}</p>
+          <p className="hero-subheadline hero-subheadline-v2">{CONFIG.hero.subheadline}</p>
           <div className="hero-buttons">
-            <Link to={CONFIG.urls.acessarSistema} className="btn btn-primary btn-lg">
+            <Link to={CONFIG.urls.acessarSistema} className="btn btn-primary btn-lg btn-primary-v2">
               {CONFIG.hero.primaryCta} <ArrowRight size={18} />
             </Link>
-            <a href="#solucoes" className="btn btn-outline btn-lg">
+            <a href="#solucoes" className="btn btn-lg btn-outline-light">
               {CONFIG.hero.secondaryCta}
             </a>
           </div>
