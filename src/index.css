@@ -623,15 +623,15 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Ajuste específico dos CTA para acessibilidade e bom hover */
 .btn-primary-v2 {
-  background: var(--color-primary); 
-  border: 1px solid var(--color-primary-light);
-  box-shadow: 0 4px 15px rgba(21, 108, 150, 0.5);
+  background: var(--color-dark); 
+  border: 1px solid var(--color-dark-light);
+  box-shadow: 0 4px 15px rgba(24, 38, 67, 0.5);
   font-weight: 600; 
   letter-spacing: 0.5px;
 }
 .btn-primary-v2:hover {
-  background: var(--color-primary-light);
-  box-shadow: 0 6px 25px rgba(21, 108, 150, 0.7);
+  background: var(--color-dark-light);
+  box-shadow: 0 6px 25px rgba(24, 38, 67, 0.7);
   color: #fff;
   transform: translateY(-2px);
 }
