@@ -142,10 +142,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── Ações ───────────────────────────────────────────────────
-
+  // Ações de Auth
   const login = async (email: string, password: string): Promise<{ error: string | null }> => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
+    setIsLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setIsLoading(false);
+      return { error: error.message };
+    }
+    
+    // Aguarda carregar as roles ANTES de liberar o redirect do componente
+    if (data.user) {
+      await loadUserData(data.user.id);
+    }
+    
+    setIsLoading(false);
     return { error: null };
   };
 
