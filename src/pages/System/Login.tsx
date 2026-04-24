@@ -8,8 +8,18 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated, globalRole, clientRole, clientId } = useAuth();
   const navigate = useNavigate();
+
+  // Se o usuário já está autenticado com role carregada, redireciona
+  // Isto cobre o caso de acessar /login quando já logado
+  if (isAuthenticated && (globalRole || clientRole)) {
+    if (globalRole === 'platform_admin') {
+      navigate('/sistema/admin', { replace: true });
+    } else if (clientRole && clientId) {
+      navigate(`/sistema/cliente/${clientId}`, { replace: true });
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,13 +30,31 @@ export default function Login() {
     setIsLoading(true);
     setError('');
 
-    const { error: loginError } = await login(email, password);
+    try {
+      const { error: loginError } = await login(email, password);
 
-    if (loginError) {
-      setError('E-mail ou senha inválidos.');
+      if (loginError) {
+        // Mensagens amigáveis
+        if (loginError.includes('Invalid login')) {
+          setError('E-mail ou senha inválidos.');
+        } else if (loginError.includes('perfil não encontrado')) {
+          setError('Usuário autenticado, mas sem perfil cadastrado. Contate o administrador.');
+        } else if (loginError.includes('sem papel')) {
+          setError('Usuário sem papel atribuído no sistema. Contate o administrador.');
+        } else {
+          setError(loginError);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Login OK — navegar para o painel
+      // Neste ponto, globalRole e clientRole JÁ estão carregados no contexto
+      navigate('/sistema/painel', { replace: true });
+    } catch (err) {
+      console.error('[Login] Erro inesperado:', err);
+      setError('Erro inesperado. Tente novamente.');
       setIsLoading(false);
-    } else {
-      navigate('/sistema/painel');
     }
   };
 
@@ -70,6 +98,7 @@ export default function Login() {
               placeholder="E-mail"
               value={email}
               onChange={e => setEmail(e.target.value)}
+              disabled={isLoading}
               style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', background: 'transparent', color: 'var(--color-dark)' }}
             />
           </div>
@@ -81,6 +110,7 @@ export default function Login() {
               placeholder="Senha"
               value={password}
               onChange={e => setPassword(e.target.value)}
+              disabled={isLoading}
               style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', background: 'transparent', color: 'var(--color-dark)' }}
             />
           </div>
