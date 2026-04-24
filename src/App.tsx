@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './store/AuthContext';
+import { AuthProvider, useAuth } from './store/AuthContext';
 import Home from './pages/Home';
 import Login from './pages/System/Login';
 import { ProtectedRoute, SystemLayout } from './components/SystemLayout';
@@ -8,17 +8,21 @@ import ClientDashboard from './pages/System/ClientDashboard';
 import CultureForm from './pages/System/Forms/CultureForm';
 import TemperamentForm from './pages/System/Forms/TemperamentForm';
 
-import { useAuth } from './store/AuthContext';
-
+// Redireciona para o painel correto após login baseado no role real
 function DashboardRouter() {
-  const { user } = useAuth();
-  
-  if (user?.perfil === 'admin') {
+  const { globalRole, clientRole, clientId, isLoading } = useAuth();
+
+  if (isLoading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Carregando...</div>;
+
+  if (globalRole === 'platform_admin') {
     return <Navigate to="/sistema/admin" replace />;
-  } else if (user?.perfil === 'cliente') {
-    return <Navigate to={`/sistema/cliente/${user.clienteId}`} replace />;
   }
-  
+
+  if (clientRole && clientId) {
+    // CEO, manager, coordinator, supervisor e respondent todos vão para o painel do cliente
+    return <Navigate to={`/sistema/cliente/${clientId}`} replace />;
+  }
+
   return <Navigate to="/login" replace />;
 }
 
@@ -29,10 +33,10 @@ function App() {
         <Routes>
           {/* Public Website */}
           <Route path="/" element={<Home />} />
-          
-          {/* Public Forms (Accessed via QR) */}
-          <Route path="/form/cultura/:slug" element={<CultureForm />} />
-          <Route path="/form/temperamento/:slug" element={<TemperamentForm />} />
+
+          {/* Public Forms — acessados via QR Code com token */}
+          <Route path="/form/cultura/:token" element={<CultureForm />} />
+          <Route path="/form/temperamento/:token" element={<TemperamentForm />} />
 
           {/* System Login */}
           <Route path="/login" element={<Login />} />
@@ -40,18 +44,18 @@ function App() {
 
           {/* Protected System Routes */}
           <Route element={<ProtectedRoute />}>
+            {/* Router automático por role */}
             <Route path="/sistema/painel" element={<DashboardRouter />} />
 
             <Route element={<SystemLayout />}>
-              {/* Admin Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              {/* Platform Admin */}
+              <Route element={<ProtectedRoute requireGlobalRole="platform_admin" />}>
                 <Route path="/sistema/admin" element={<AdminDashboard />} />
-                <Route path="/sistema/admin/qr/:clienteId" element={<div>Redirecionando para visualização mockada dos QRs do admin... <br/>(Neste MVP os QRs também ficam visíveis no painel do cliente)</div>} />
               </Route>
 
-              {/* Client Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['cliente']} />}>
-                <Route path="/sistema/cliente/:clienteId" element={<ClientDashboard />} />
+              {/* Client Users (todos os roles de cliente) */}
+              <Route element={<ProtectedRoute requireClientUser />}>
+                <Route path="/sistema/cliente/:clientId" element={<ClientDashboard />} />
               </Route>
             </Route>
           </Route>

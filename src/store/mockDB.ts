@@ -169,6 +169,32 @@ export const api = {
 
   getCultureItems: (clienteId: string) => getDB().cultureItems.filter(ci => ci.clienteId === clienteId && ci.ativo),
   
+  getAllCultureItems: (clienteId?: string) => {
+    const db = getDB();
+    if (clienteId) return db.cultureItems.filter(ci => ci.clienteId === clienteId);
+    return db.cultureItems;
+  },
+
+  addCultureItem: (item: Omit<CultureItem, 'id'>) => {
+    const db = getDB();
+    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9) };
+    db.cultureItems.push(newItem);
+    saveDB(db);
+    return newItem;
+  },
+
+  updateCultureItem: (id: string, updates: Partial<CultureItem>) => {
+    const db = getDB();
+    db.cultureItems = db.cultureItems.map(ci => ci.id === id ? { ...ci, ...updates } : ci);
+    saveDB(db);
+  },
+
+  deleteCultureItem: (id: string) => {
+    const db = getDB();
+    db.cultureItems = db.cultureItems.filter(ci => ci.id !== id);
+    saveDB(db);
+  },
+  
   saveCultureResponse: (resp: Omit<CultureResponse, 'id' | 'data'>) => {
     const db = getDB();
     db.cultureResponses.push({
