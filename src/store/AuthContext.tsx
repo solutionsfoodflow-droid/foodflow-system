@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { GlobalRole, ClientRole } from '../types/database';
@@ -14,22 +14,16 @@ export interface AppProfile {
 }
 
 export interface AuthContextType {
-  // Supabase session/user
   session: Session | null;
   supabaseUser: User | null;
-  // App profile
   profile: AppProfile | null;
-  // Role resolved
-  globalRole: GlobalRole | null;   // platform_admin | null
-  clientRole: ClientRole | null;   // papel dentro do cliente
-  clientId: string | null;         // ID do cliente vinculado
-  orgUnitId: string | null;        // unidade org primária
-  // Estado
+  globalRole: GlobalRole | null;
+  clientRole: ClientRole | null;
+  clientId: string | null;
+  orgUnitId: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  // Erro de carregamento (para exibir na UI)
   loadError: string | null;
-  // Ações
   login: (email: string, password: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
 }
@@ -51,25 +45,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Ref para evitar chamadas concorrentes a loadUserData
-  const loadingRef = useRef(false);
-  // Ref para saber se o login() está controlando o fluxo (evitar duplicata no onAuthStateChange)
-  const loginInProgressRef = useRef(false);
-
-  // Carrega profile + roles após ter um user autenticado
+  /**
+   * Carrega profile + roles do banco.
+   * Retorna true se tudo OK, false se houve erro.
+   */
   const loadUserData = useCallback(async (userId: string): Promise<boolean> => {
-    // Guard contra chamadas concorrentes
-    if (loadingRef.current) {
-      console.log('[AuthContext] loadUserData já em andamento, ignorando chamada duplicada');
-      return false;
-    }
-    loadingRef.current = true;
     setLoadError(null);
 
     try {
-      console.log('[AuthContext] Carregando dados do usuário:', userId);
+      console.log('[Auth] Carregando dados para:', userId);
 
-      // 1. Carregar profile
+      // 1. Profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, full_name, email, global_role, is_active')
@@ -77,86 +63,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (profileError || !profileData) {
-        const msg = profileError?.message || 'Perfil não encontrado';
-        console.error('[AuthContext] Falha ao carregar perfil:', msg);
-        setLoadError('Usuário autenticado, mas perfil não encontrado no sistema.');
-        loadingRef.current = false;
+        console.error('[Auth] Perfil não encontrado:', profileError?.message);
+        setLoadError('Perfil não encontrado no sistema.');
         return false;
       }
 
-      console.log('[AuthContext] Perfil carregado:', profileData.email, 'role:', profileData.global_role);
       setProfile(profileData);
       setGlobalRole(profileData.global_role);
 
-      // Se for platform_admin, não precisa carregar client role
+      // Admin global: não precisa de client role
       if (profileData.global_role === 'platform_admin') {
         setClientRole(null);
         setClientId(null);
         setOrgUnitId(null);
-        console.log('[AuthContext] Admin da plataforma identificado. Dados carregados com sucesso.');
-        loadingRef.current = false;
+        console.log('[Auth] ✅ Admin da plataforma carregado');
         return true;
       }
 
-      // 2. Carregar papel no cliente (primeiro ativo)
-      const { data: clientRoleData, error: roleError } = await supabase
+      // 2. Papel no cliente
+      const { data: roleData, error: roleError } = await supabase
         .from('user_client_roles')
         .select('client_id, client_role')
         .eq('user_id', userId)
         .eq('status', 'active')
         .limit(1)
-        .maybeSingle(); // maybeSingle não lança erro se 0 rows
+        .maybeSingle();
 
       if (roleError) {
-        const msg = roleError.message;
-        console.error('[AuthContext] Falha ao carregar papel do cliente:', msg);
-        setLoadError('Erro ao carregar papel do usuário: ' + msg);
-        loadingRef.current = false;
+        console.error('[Auth] Erro ao buscar role:', roleError.message);
+        setLoadError('Erro ao carregar papel do usuário.');
         return false;
       }
 
-      if (clientRoleData) {
-        console.log('[AuthContext] Papel do cliente:', clientRoleData.client_role, 'client_id:', clientRoleData.client_id);
-        setClientRole(clientRoleData.client_role);
-        setClientId(clientRoleData.client_id);
+      if (roleData) {
+        setClientRole(roleData.client_role);
+        setClientId(roleData.client_id);
 
-        // 3. Carregar unidade org primária (opcional, não bloqueia login)
+        // 3. Org unit (opcional)
         const { data: orgData } = await supabase
           .from('user_org_assignments')
           .select('org_unit_id')
           .eq('user_id', userId)
-          .eq('client_id', clientRoleData.client_id)
+          .eq('client_id', roleData.client_id)
           .eq('is_primary', true)
           .limit(1)
           .maybeSingle();
 
         setOrgUnitId(orgData?.org_unit_id ?? null);
+        console.log('[Auth] ✅ Cliente carregado:', roleData.client_role);
       } else {
-        console.warn('[AuthContext] Nenhum papel de cliente encontrado para este usuário');
         setClientRole(null);
         setClientId(null);
         setOrgUnitId(null);
 
-        // Se não é admin e não tem role de cliente, informar
         if (!profileData.global_role) {
           setLoadError('Usuário sem papel atribuído. Contate o administrador.');
-          loadingRef.current = false;
           return false;
         }
       }
 
-      console.log('[AuthContext] Dados do usuário carregados com sucesso.');
-      loadingRef.current = false;
       return true;
     } catch (err) {
-      console.error('[AuthContext] Erro inesperado ao carregar dados:', err);
-      setLoadError('Erro inesperado ao carregar dados do usuário.');
-      loadingRef.current = false;
+      console.error('[Auth] Erro inesperado:', err);
+      setLoadError('Erro inesperado ao carregar dados.');
       return false;
     }
   }, []);
 
-  // Limpa estado ao sair
   function clearUserData() {
     setProfile(null);
     setGlobalRole(null);
@@ -166,104 +139,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoadError(null);
   }
 
-  // Escuta mudanças de sessão (incluindo reload da página)
+  // ── Inicialização + listener ───────────────────────────────
   useEffect(() => {
-    // 1. Carregar sessão existente (ex: após reload)
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setSupabaseUser(existingSession?.user ?? null);
-      if (existingSession?.user) {
-        loadUserData(existingSession.user.id).finally(() => setIsLoading(false));
-      } else {
-        setIsLoading(false);
+    let mounted = true;
+
+    // 1. Recuperar sessão existente (reload / volta de aba)
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      if (!mounted) return;
+
+      if (s?.user) {
+        setSession(s);
+        setSupabaseUser(s.user);
+        await loadUserData(s.user.id);
       }
+      if (mounted) setIsLoading(false);
     });
 
-    // 2. Listener para mudanças de auth (login, logout, token refresh)
+    // 2. Listener — só reage a SIGNED_OUT e TOKEN_REFRESHED.
+    //    SIGNED_IN é tratado exclusivamente por login() e getSession().
+    //    Isso elimina 100% da race condition.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('[AuthContext] onAuthStateChange:', event);
-
-        setSession(newSession);
-        setSupabaseUser(newSession?.user ?? null);
-
-        if (event === 'SIGNED_IN' && loginInProgressRef.current) {
-          // O login() já está cuidando de carregar os dados.
-          // NÃO chamar loadUserData aqui para evitar race condition.
-          console.log('[AuthContext] SIGNED_IN ignorado — login() está controlando o fluxo');
-          return;
-        }
+      (event, newSession) => {
+        if (!mounted) return;
+        console.log('[Auth] onAuthStateChange:', event);
 
         if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setSupabaseUser(null);
           clearUserData();
           setIsLoading(false);
-          return;
         }
 
-        // Para TOKEN_REFRESHED ou SIGNED_IN sem login ativo (ex: outra aba)
-        if (newSession?.user && event !== 'INITIAL_SESSION') {
-          await loadUserData(newSession.user.id);
+        if (event === 'TOKEN_REFRESHED' && newSession) {
+          setSession(newSession);
+          setSupabaseUser(newSession.user);
         }
+
+        // SIGNED_IN e INITIAL_SESSION são IGNORADOS aqui de propósito.
+        // login() e getSession() já cuidam de carregar os dados.
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [loadUserData]);
 
-  // ── Ações ───────────────────────────────────────────────────
+  // ── Login ──────────────────────────────────────────────────
 
   const login = async (email: string, password: string): Promise<{ error: string | null }> => {
     setIsLoading(true);
     setLoadError(null);
-    loginInProgressRef.current = true;
 
     try {
-      console.log('[AuthContext] Iniciando login para:', email);
+      console.log('[Auth] Login:', email);
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
-        console.error('[AuthContext] Erro de autenticação:', error.message);
+        console.error('[Auth] Falha auth:', error.message);
         setIsLoading(false);
-        loginInProgressRef.current = false;
         return { error: error.message };
       }
 
-      if (!data.user) {
-        console.error('[AuthContext] Auth retornou sem user');
+      if (!data.user || !data.session) {
         setIsLoading(false);
-        loginInProgressRef.current = false;
-        return { error: 'Autenticação falhou: resposta inesperada.' };
+        return { error: 'Resposta inesperada do servidor.' };
       }
 
-      // Setar sessão e user imediatamente
+      // Setar sessão imediatamente
       setSession(data.session);
       setSupabaseUser(data.user);
 
-      console.log('[AuthContext] Autenticação OK. Carregando dados...');
+      // Carregar dados — SEM concorrência porque onAuthStateChange não toca em SIGNED_IN
+      const ok = await loadUserData(data.user.id);
 
-      // Carregar dados do usuário de forma síncrona ANTES de retornar
-      const success = await loadUserData(data.user.id);
+      setIsLoading(false);
 
-      if (!success) {
-        console.error('[AuthContext] Login OK, mas falha ao carregar dados do usuário');
-        // Não faz signOut — o usuário pode tentar de novo
-        setIsLoading(false);
-        loginInProgressRef.current = false;
+      if (!ok) {
         return { error: loadError || 'Erro ao carregar dados do usuário.' };
       }
 
-      setIsLoading(false);
-      loginInProgressRef.current = false;
-      console.log('[AuthContext] Login completo com sucesso');
+      console.log('[Auth] ✅ Login completo');
       return { error: null };
     } catch (err) {
-      console.error('[AuthContext] Erro inesperado no login:', err);
+      console.error('[Auth] Erro inesperado:', err);
       setIsLoading(false);
-      loginInProgressRef.current = false;
       return { error: 'Erro inesperado. Tente novamente.' };
     }
   };
+
+  // ── Logout ─────────────────────────────────────────────────
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -273,18 +240,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        session,
-        supabaseUser,
-        profile,
-        globalRole,
-        clientRole,
-        clientId,
-        orgUnitId,
-        isLoading,
-        isAuthenticated: !!supabaseUser,
-        loadError,
-        login,
-        logout,
+        session, supabaseUser, profile,
+        globalRole, clientRole, clientId, orgUnitId,
+        isLoading, isAuthenticated: !!supabaseUser,
+        loadError, login, logout,
       }}
     >
       {children}
