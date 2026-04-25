@@ -20,6 +20,12 @@ export default function AdminDashboard() {
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDesc, setNewItemDesc] = useState('');
 
+  // Estados para Cópia de Itens
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copySourceClientId, setCopySourceClientId] = useState('');
+  const [sourceCultureItems, setSourceCultureItems] = useState<CultureItem[]>([]);
+  const [copyingItem, setCopyingItem] = useState(false);
+
   // ── Loaders ─────────────────────────────────────────────────
   async function loadClients() {
     const { data } = await supabase.from('clients').select('*, client_branding(logo_url)').order('name');
@@ -78,6 +84,28 @@ export default function AdminDashboard() {
     if (!confirm('Excluir?')) return;
     await supabase.from('culture_items').delete().eq('id', id);
     if (selectedClient) loadCultureItems(selectedClient.id);
+  }
+
+  async function loadSourceCultureItems(clientId: string) {
+    const { data } = await supabase.from('culture_items').select('*').eq('client_id', clientId).order('display_order');
+    setSourceCultureItems(data ?? []);
+  }
+
+  async function copyCultureItem(sourceItem: CultureItem) {
+    if (!selectedClient) return;
+    setCopyingItem(true);
+    const maxOrder = cultureItems.length > 0 ? Math.max(...cultureItems.map(i => i.display_order)) + 1 : 1;
+    await supabase.from('culture_items').insert({ 
+      client_id: selectedClient.id, 
+      title: sourceItem.title, 
+      description: sourceItem.description, 
+      display_order: maxOrder, 
+      is_active: true,
+      copied_from_item_id: sourceItem.id
+    });
+    await loadCultureItems(selectedClient.id);
+    setCopyingItem(false);
+    setShowCopyModal(false);
   }
 
   async function addTempQuestion() {
@@ -226,6 +254,9 @@ export default function AdminDashboard() {
 
           {activeTab === 'cultura' && (
             <div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                <button onClick={() => { setShowCopyModal(true); setCopySourceClientId(''); setSourceCultureItems([]); }} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Copy size={16}/> Copiar de outro cliente</button>
+              </div>
               <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
                 <input placeholder="Título do pilar" value={newItemTitle} onChange={e => setNewItemTitle(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '0.5rem' }} />
                 <textarea placeholder="Descrição (opcional)" value={newItemDesc} onChange={e => setNewItemDesc(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
@@ -276,6 +307,57 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal de Cópia */}
+      {showCopyModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '2rem', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Copiar Item de Cultura</h2>
+              <button onClick={() => setShowCopyModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>Fechar</button>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.85rem' }}>Selecione o Cliente de Origem</label>
+              <select 
+                value={copySourceClientId} 
+                onChange={e => { setCopySourceClientId(e.target.value); loadSourceCultureItems(e.target.value); }}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+              >
+                <option value="">Selecione...</option>
+                {clients.filter(c => c.id !== selectedClient?.id).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {copySourceClientId && sourceCultureItems.length === 0 && (
+              <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Este cliente não possui itens de cultura cadastrados.</p>
+            )}
+
+            {sourceCultureItems.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem' }}>Selecione o item para copiar:</p>
+                {sourceCultureItems.map(item => (
+                  <div key={item.id} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item.title}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>{item.description}</div>
+                    </div>
+                    <button 
+                      onClick={() => copyCultureItem(item)} 
+                      disabled={copyingItem}
+                      style={{ padding: '0.5rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', marginLeft: '1rem' }}
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

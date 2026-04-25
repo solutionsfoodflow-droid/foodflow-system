@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../store/AuthContext';
 import type { OrgUnit, OrgUnitType } from '../../types/database';
 import { BarChart2, Users, FileText, ClipboardList, TrendingUp } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 type ViewRole = 'client_ceo' | 'client_manager' | 'client_coordinator' | 'client_supervisor';
 
@@ -27,8 +28,12 @@ export default function ClientDashboard() {
   const [stats, setStats] = useState<Stats>({ cultureResponses: 0, temperamentResponses: 0, orgUnits: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Mocks para os dashboards e relatórios (substituíveis pelos dados reais onde houver)
   const [recentReports, setRecentReports] = useState<any[]>([]);
+  const [dashboardData, setDashboardData] = useState<{
+    avgByItem: { name: string; media: number }[];
+    scoreDist: { name: string; value: number }[];
+    justifications: { item: string; text: string; score: number }[];
+  }>({ avgByItem: [], scoreDist: [], justifications: [] });
 
   useEffect(() => {
     if (!activeClientId) return;
@@ -46,15 +51,46 @@ export default function ClientDashboard() {
     setOrgUnits(units ?? []);
     setSelectedOrgUnit(units?.[0] ?? null);
 
-    const [cultureRes, temperamentRes, orgRes, recentCult] = await Promise.all([
+    const [cultureRes, temperamentRes, orgRes, recentCult, dashboardRes] = await Promise.all([
       supabase.from('culture_self_assessments').select('id', { count: 'exact', head: true }).eq('client_id', activeClientId),
       supabase.from('temperament_submissions').select('id', { count: 'exact', head: true }).eq('client_id', activeClientId),
       supabase.from('org_units').select('id', { count: 'exact', head: true }).eq('client_id', activeClientId).eq('is_active', true),
-      supabase.from('culture_self_assessments').select('id, respondent_name, respondent_level, submitted_at, respondent_org_unit_id').eq('client_id', activeClientId).order('submitted_at', { ascending: false }).limit(20)
+      supabase.from('culture_self_assessments').select('id, respondent_name, respondent_level, submitted_at, respondent_org_unit_id').eq('client_id', activeClientId).order('submitted_at', { ascending: false }).limit(20),
+      supabase.from('culture_self_assessment_answers').select('score, justification_text, culture_item_id, culture_items(title), culture_self_assessments!inner(client_id)').eq('culture_self_assessments.client_id', activeClientId)
     ]);
 
     setStats({ cultureResponses: cultureRes.count ?? 0, temperamentResponses: temperamentRes.count ?? 0, orgUnits: orgRes.count ?? 0 });
     setRecentReports(recentCult.data ?? []);
+    
+    const answers = (dashboardRes.data as any[]) ?? [];
+    const itemMap = new Map<string, { sum: number; count: number }>();
+    const distMap = { '1 - Péssimo': 0, '2 - Ruim': 0, '3 - Moderado': 0, '4 - Ótimo': 0, '5 - Excelente': 0 };
+    const justs: any[] = [];
+
+    answers.forEach(ans => {
+      const title = ans.culture_items?.title || 'Desconhecido';
+      const score = ans.score;
+      
+      if (!itemMap.has(title)) itemMap.set(title, { sum: 0, count: 0 });
+      const im = itemMap.get(title)!;
+      im.sum += score;
+      im.count += 1;
+
+      if (score === 1) distMap['1 - Péssimo']++;
+      if (score === 2) distMap['2 - Ruim']++;
+      if (score === 3) distMap['3 - Moderado']++;
+      if (score === 4) distMap['4 - Ótimo']++;
+      if (score === 5) distMap['5 - Excelente']++;
+
+      if (ans.justification_text && ans.justification_text.trim().length > 0) {
+        justs.push({ item: title, text: ans.justification_text, score });
+      }
+    });
+
+    const avgByItem = Array.from(itemMap.entries()).map(([k, v]) => ({ name: k, media: Number((v.sum / v.count).toFixed(1)) })).sort((a,b) => b.media - a.media);
+    const scoreDist = Object.entries(distMap).map(([k, v]) => ({ name: k, value: v })).filter(d => d.value > 0);
+
+    setDashboardData({ avgByItem, scoreDist, justifications: justs });
     setLoading(false);
   }
 
@@ -136,26 +172,58 @@ export default function ClientDashboard() {
           {activeTab === 'dashboards' && (
             <div style={cardStyle}>
               <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Dashboards Executivos</h2>
-              {stats.cultureResponses === 0 && stats.temperamentResponses === 0 ? (
+              {stats.cultureResponses === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                    <TrendingUp size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
                    <p>Ainda não há dados suficientes para gerar os dashboards.</p>
-                   <p style={{ fontSize: '0.85rem' }}>Compartilhe os formulários com as equipes para popular esta seção.</p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                     <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Progresso de Cultura</h3>
-                     <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                        [Gráfico de Radar em breve]
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                  <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                     <h3 style={{ fontSize: '1rem', marginBottom: '1.5rem', color: '#1e293b' }}>Nota Média por Valor Cultural</h3>
+                     <div style={{ height: '300px', width: '100%' }}>
+                       <ResponsiveContainer width="100%" height="100%">
+                         <BarChart data={dashboardData.avgByItem} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                           <XAxis type="number" domain={[0, 5]} ticks={[1,2,3,4,5]} />
+                           <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
+                           <Tooltip cursor={{ fill: '#f1f5f9' }} />
+                           <Bar dataKey="media" fill="var(--color-primary)" radius={[0, 4, 4, 0]} />
+                         </BarChart>
+                       </ResponsiveContainer>
                      </div>
                   </div>
-                  <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                     <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Distribuição de Temperamentos</h3>
-                     <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                        [Gráfico de Barras em breve]
+
+                  <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                     <h3 style={{ fontSize: '1rem', marginBottom: '1.5rem', color: '#1e293b' }}>Distribuição das Notas</h3>
+                     <div style={{ height: '300px', width: '100%' }}>
+                       <ResponsiveContainer width="100%" height="100%">
+                         <PieChart>
+                           <Pie data={dashboardData.scoreDist} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value" label>
+                             {dashboardData.scoreDist.map((entry, index) => (
+                               <Cell key={`cell-${index}`} fill={['#ef4444', '#f97316', '#eab308', '#22c55e', '#15803d'][parseInt(entry.name.charAt(0)) - 1]} />
+                             ))}
+                           </Pie>
+                           <Tooltip />
+                           <Legend />
+                         </PieChart>
+                       </ResponsiveContainer>
                      </div>
                   </div>
+
+                  {dashboardData.justifications.length > 0 && (
+                    <div style={{ gridColumn: '1 / -1', background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: '#1e293b' }}>Justificativas em Destaque</h3>
+                      <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {dashboardData.justifications.map((j, idx) => (
+                          <div key={idx} style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', borderLeft: `4px solid ${['#ef4444', '#f97316', '#eab308', '#22c55e', '#15803d'][j.score - 1]}` }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase' }}>{j.item} (Nota {j.score})</div>
+                            <div style={{ fontSize: '0.9rem', color: '#334155' }}>"{j.text}"</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

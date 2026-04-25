@@ -101,6 +101,7 @@ export type Database = {
       culture_items: {
         Row: {
           client_id: string
+          copied_from_item_id: string | null
           created_at: string
           description: string | null
           display_order: number
@@ -111,6 +112,7 @@ export type Database = {
         }
         Insert: {
           client_id: string
+          copied_from_item_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -121,6 +123,7 @@ export type Database = {
         }
         Update: {
           client_id?: string
+          copied_from_item_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -135,6 +138,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "culture_items_copied_from_item_id_fkey"
+            columns: ["copied_from_item_id"]
+            isOneToOne: false
+            referencedRelation: "culture_items"
             referencedColumns: ["id"]
           },
         ]
@@ -1155,4 +1165,3 @@ export type OrgUnit = Database['public']['Tables']['org_units']['Row'];
 export type OrgUnitType = Database['public']['Enums']['org_unit_type_enum'];
 export type GlobalRole = Database['public']['Enums']['global_role_enum'];
 export type ClientRole = Database['public']['Enums']['client_role_enum'];
-

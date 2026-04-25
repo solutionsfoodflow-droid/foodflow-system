@@ -248,9 +248,13 @@ export default function CultureForm() {
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.25rem', color: 'var(--color-dark)' }}>
             Avalie cada pilar cultural
           </h2>
-          <p style={{ color: 'var(--color-gray-medium)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-            Nota 1 = Discordo totalmente · Nota 5 = Concordo totalmente
-          </p>
+          <div style={{ color: 'var(--color-gray-medium)', fontSize: '0.85rem', marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <span style={{background: '#fee2e2', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#991b1b', fontSize: '0.75rem', fontWeight: 600}}>1 = Péssimo</span>
+            <span style={{background: '#ffedd5', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#9a3412', fontSize: '0.75rem', fontWeight: 600}}>2 = Ruim</span>
+            <span style={{background: '#fef08a', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#854d0e', fontSize: '0.75rem', fontWeight: 600}}>3 = Moderado</span>
+            <span style={{background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#166534', fontSize: '0.75rem', fontWeight: 600}}>4 = Ótimo</span>
+            <span style={{background: '#bbf7d0', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#14532d', fontSize: '0.75rem', fontWeight: 600}}>5 = Excelente</span>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {cultureItems.map((item, idx) => (
@@ -282,7 +286,7 @@ export default function CultureForm() {
                 </div>
 
                 <textarea
-                  placeholder="Justificativa (opcional)"
+                  placeholder="Exemplifique comportamento no dia a dia (opcional)"
                   value={answers[item.id]?.justification ?? ''}
                   onChange={e => setAnswers(p => ({ ...p, [item.id]: { score: p[item.id]?.score ?? 0, justification: e.target.value } }))}
                   rows={2}
