@@ -46,7 +46,7 @@ export default function CultureForm() {
   async function validateToken(tok: string) {
     const { data, error } = await supabase
       .from('public_form_links')
-      .select('client_id, form_type, is_active, expires_at')
+      .select('client_id, form_type, is_active, expires_at, hierarchy_level')
       .eq('token', tok)
       .single();
 
@@ -56,6 +56,9 @@ export default function CultureForm() {
     if (data.expires_at && new Date(data.expires_at) < new Date()) { setTokenStatus('expired'); return; }
 
     setClientId(data.client_id);
+    if (data.hierarchy_level) {
+      setRespondent(p => ({ ...p, level: data.hierarchy_level }));
+    }
 
     // Carregar dados do cliente
     const { data: client } = await supabase
@@ -206,12 +209,17 @@ export default function CultureForm() {
               <select
                 value={respondent.level}
                 onChange={e => setRespondent(p => ({ ...p, level: e.target.value }))}
-                style={{ width: '100%', padding: '0.7rem 0.875rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.95rem', background: '#fff' }}
+                style={{ width: '100%', padding: '0.7rem 0.875rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.95rem', background: respondent.level ? '#f8fafc' : '#fff' }}
+                disabled={!!respondent.level}
               >
                 <option value="">Selecione...</option>
-                <option value="client_supervisor">Supervisor</option>
-                <option value="client_coordinator">Coordenador</option>
-                <option value="client_manager">Gerente</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="coordenador">Coordenador</option>
+                <option value="gerente">Gerente</option>
+                <option value="operacional">Operacional</option>
+                <option value="client_supervisor">Supervisor (Antigo)</option>
+                <option value="client_coordinator">Coordenador (Antigo)</option>
+                <option value="client_manager">Gerente (Antigo)</option>
                 <option value="client_ceo">CEO / Diretoria</option>
                 <option value="employee_respondent">Colaborador</option>
               </select>

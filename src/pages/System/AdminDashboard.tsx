@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Client, CultureItem } from '../../types/database';
-import { Plus, Settings, QrCode, RefreshCw, Trash2, Edit3, Check, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Settings, QrCode, RefreshCw, Trash2, Edit3, Check, X, ToggleLeft, ToggleRight, LayoutDashboard, Brain, Copy } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 const APP_BASE_URL = window.location.origin;
+
+type TabType = 'visao_geral' | 'cultura' | 'temperamento' | 'qrcodes' | 'configuracoes';
 
 export default function AdminDashboard() {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [cultureItems, setCultureItems] = useState<CultureItem[]>([]);
-  const [formLinks, setFormLinks] = useState<{ id: string; form_type: string; token: string; is_active: boolean }[]>([]);
+  const [tempQuestions, setTempQuestions] = useState<any[]>([]);
+  const [formLinks, setFormLinks] = useState<{ id: string; form_type: string; token: string; is_active: boolean; hierarchy_level: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'clientes' | 'cultura' | 'qrcodes'>('clientes');
+  const [activeTab, setActiveTab] = useState<TabType>('visao_geral');
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDesc, setNewItemDesc] = useState('');
   const [editingItem, setEditingItem] = useState<string | null>(null);
@@ -20,28 +23,33 @@ export default function AdminDashboard() {
   const [editDesc, setEditDesc] = useState('');
 
   // ── Loaders ─────────────────────────────────────────────────
-
   async function loadClients() {
     setLoading(true);
-    const { data } = await supabase.from('clients').select('*').order('name');
+    const { data } = await supabase.from('clients').select('*, client_branding(logo_url)').order('name');
     setClients(data ?? []);
     setLoading(false);
   }
 
   async function loadCultureItems(clientId: string) {
-    const { data } = await supabase
-      .from('culture_items')
-      .select('*')
-      .eq('client_id', clientId)
-      .order('display_order');
+    const { data } = await supabase.from('culture_items').select('*').eq('client_id', clientId).order('display_order');
     setCultureItems(data ?? []);
   }
 
+  async function loadTempQuestions(clientId: string) {
+    // Busca ou cria o questionário do cliente
+    let { data: quest } = await supabase.from('temperament_questionnaires').select('id').eq('client_id', clientId).single();
+    if (!quest) {
+      const { data: newQuest } = await supabase.from('temperament_questionnaires').insert({ client_id: clientId, title: 'Temperamento' }).select('id').single();
+      quest = newQuest;
+    }
+    if (quest) {
+      const { data } = await supabase.from('temperament_questions').select('*').eq('questionnaire_id', quest.id).order('display_order');
+      setTempQuestions(data ?? []);
+    }
+  }
+
   async function loadFormLinks(clientId: string) {
-    const { data } = await supabase
-      .from('public_form_links')
-      .select('id, form_type, token, is_active')
-      .eq('client_id', clientId);
+    const { data } = await supabase.from('public_form_links').select('*').eq('client_id', clientId);
     setFormLinks(data ?? []);
   }
 
@@ -50,12 +58,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (selectedClient) {
       loadCultureItems(selectedClient.id);
+      loadTempQuestions(selectedClient.id);
       loadFormLinks(selectedClient.id);
     }
   }, [selectedClient]);
 
-  // ── Client actions ───────────────────────────────────────────
-
+  // ── Actions ───────────────────────────────────────────
   async function toggleClientStatus(client: Client) {
     const newStatus = client.status === 'active' ? 'inactive' : 'active';
     await supabase.from('clients').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', client.id);
@@ -63,49 +71,43 @@ export default function AdminDashboard() {
     if (selectedClient?.id === client.id) setSelectedClient({ ...client, status: newStatus });
   }
 
-  // ── Culture item actions ─────────────────────────────────────
-
   async function addCultureItem() {
     if (!selectedClient || !newItemTitle.trim()) return;
     const maxOrder = cultureItems.length > 0 ? Math.max(...cultureItems.map(i => i.display_order)) + 1 : 1;
-    await supabase.from('culture_items').insert({
-      client_id: selectedClient.id,
-      title: newItemTitle.trim(),
-      description: newItemDesc.trim() || null,
-      display_order: maxOrder,
-      is_active: true,
-    });
-    setNewItemTitle('');
-    setNewItemDesc('');
-    loadCultureItems(selectedClient.id);
+    await supabase.from('culture_items').insert({ client_id: selectedClient.id, title: newItemTitle.trim(), description: newItemDesc.trim() || null, display_order: maxOrder, is_active: true });
+    setNewItemTitle(''); setNewItemDesc(''); loadCultureItems(selectedClient.id);
   }
 
   async function updateCultureItem(id: string) {
-    await supabase.from('culture_items').update({
-      title: editTitle,
-      description: editDesc || null,
-      updated_at: new Date().toISOString(),
-    }).eq('id', id);
-    setEditingItem(null);
-    if (selectedClient) loadCultureItems(selectedClient.id);
+    await supabase.from('culture_items').update({ title: editTitle, description: editDesc || null, updated_at: new Date().toISOString() }).eq('id', id);
+    setEditingItem(null); if (selectedClient) loadCultureItems(selectedClient.id);
   }
 
   async function deleteCultureItem(id: string) {
-    if (!confirm('Excluir este item?')) return;
+    if (!confirm('Excluir?')) return;
     await supabase.from('culture_items').delete().eq('id', id);
     if (selectedClient) loadCultureItems(selectedClient.id);
   }
 
-  // ── QR Code / Form links ─────────────────────────────────────
+  async function addTempQuestion() {
+    if (!selectedClient || !newItemTitle.trim()) return;
+    const { data: quest } = await supabase.from('temperament_questionnaires').select('id').eq('client_id', selectedClient.id).single();
+    if (!quest) return;
+    const maxOrder = tempQuestions.length > 0 ? Math.max(...tempQuestions.map(i => i.display_order)) + 1 : 1;
+    await supabase.from('temperament_questions').insert({ questionnaire_id: quest.id, prompt: newItemTitle.trim(), question_type: 'multiple_choice', display_order: maxOrder, is_active: true });
+    setNewItemTitle(''); loadTempQuestions(selectedClient.id);
+  }
 
-  async function generateFormLink(formType: 'culture_self_assessment' | 'temperament') {
+  async function deleteTempQuestion(id: string) {
+    if (!confirm('Excluir pergunta?')) return;
+    await supabase.from('temperament_questions').delete().eq('id', id);
+    if (selectedClient) loadTempQuestions(selectedClient.id);
+  }
+
+  async function generateFormLink(formType: string, level: string) {
     if (!selectedClient) return;
-    const { data } = await supabase.from('public_form_links').insert({
-      client_id: selectedClient.id,
-      form_type: formType,
-      is_active: true,
-    }).select().single();
-    if (data) loadFormLinks(selectedClient.id);
+    await supabase.from('public_form_links').insert({ client_id: selectedClient.id, form_type: formType, is_active: true, hierarchy_level: level });
+    loadFormLinks(selectedClient.id);
   }
 
   async function toggleFormLink(id: string, current: boolean) {
@@ -114,244 +116,177 @@ export default function AdminDashboard() {
   }
 
   async function deleteFormLink(id: string) {
-    if (!confirm('Excluir este link?')) return;
+    if (!confirm('Excluir?')) return;
     await supabase.from('public_form_links').delete().eq('id', id);
     if (selectedClient) loadFormLinks(selectedClient.id);
   }
 
-  // ── Render ───────────────────────────────────────────────────
+  // ── Render Helpers ───────────────────────────────────────────────
+  const cardStyle: React.CSSProperties = { background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' };
+  const tabBtn = (tab: TabType, label: string) => (
+    <button style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', background: activeTab === tab ? 'var(--color-primary)' : '#f1f5f9', color: activeTab === tab ? '#fff' : '#64748b' }} onClick={() => setActiveTab(tab)}>{label}</button>
+  );
 
-  const cardStyle: React.CSSProperties = {
-    background: '#fff', borderRadius: '12px', padding: '1.5rem',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9',
+  const renderLevels = () => {
+    const levels = ['operacional', 'supervisor', 'coordenador', 'gerente'];
+    return levels.map(level => (
+      <div key={level} style={{ marginBottom: '2rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+        <h3 style={{ textTransform: 'capitalize', margin: '0 0 1rem', color: 'var(--color-dark)', fontSize: '1.1rem' }}>Nível: {level}</h3>
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <button onClick={() => generateFormLink('culture_self_assessment', level)} style={{ padding: '0.5rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>+ QR Cultura</button>
+          <button onClick={() => generateFormLink('temperament', level)} style={{ padding: '0.5rem 1rem', background: 'var(--color-secondary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>+ QR Temperamento</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+          {formLinks.filter(l => l.hierarchy_level === level).map(link => {
+            const isCulture = link.form_type === 'culture_self_assessment';
+            const url = `${APP_BASE_URL}/form/${isCulture ? 'cultura' : 'temperamento'}/${link.token}`;
+            return (
+              <div key={link.id} style={{ background: '#fff', borderRadius: '10px', padding: '1rem', textAlign: 'center', border: `1px solid ${link.is_active ? '#e2e8f0' : '#fee2e2'}`, opacity: link.is_active ? 1 : 0.6 }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: isCulture ? 'var(--color-primary)' : 'var(--color-secondary)', marginBottom: '0.75rem' }}>
+                  {isCulture ? '📋 Cultura' : '🧠 Temperamento'}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem', padding: '0.5rem', background: '#f8fafc', borderRadius: '6px' }}>
+                  <QRCodeSVG value={url} size={120} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                   <input readOnly value={url} style={{ fontSize: '0.65rem', padding: '0.3rem', border: '1px solid #e2e8f0', borderRadius: '4px', width: '100%' }} />
+                   <button onClick={() => navigator.clipboard.writeText(url)} title="Copiar link" style={{ border: 'none', background: 'none', cursor: 'pointer' }}><Copy size={14}/></button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                  <button onClick={() => toggleFormLink(link.id, link.is_active)} style={{ background: link.is_active ? '#dcfce7' : '#f1f5f9', border: 'none', borderRadius: '6px', padding: '0.35rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', color: link.is_active ? '#16a34a' : '#64748b' }}>{link.is_active ? 'Ativo' : 'Inativo'}</button>
+                  <button onClick={() => deleteFormLink(link.id)} style={{ background: '#fee2e2', border: 'none', borderRadius: '6px', padding: '0.35rem 0.6rem', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={13} /></button>
+                </div>
+              </div>
+            );
+          })}
+          {formLinks.filter(l => l.hierarchy_level === level).length === 0 && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Nenhum QR Code gerado para este nível.</p>}
+        </div>
+      </div>
+    ));
   };
-
-  const tabBtn = (tab: typeof activeTab): React.CSSProperties => ({
-    padding: '0.5rem 1.25rem', borderRadius: '8px', border: 'none',
-    cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem',
-    background: activeTab === tab ? 'var(--color-primary)' : '#f1f5f9',
-    color: activeTab === tab ? '#fff' : '#64748b',
-    transition: 'all 0.2s',
-  });
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-dark)', margin: 0 }}>Painel do Administrador</h1>
-        <p style={{ color: 'var(--color-gray-medium)', marginTop: '0.25rem' }}>Gerencie clientes, cultura e formulários</p>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-dark)', margin: 0 }}>Painel do Administrador</h1>
+          <p style={{ color: 'var(--color-gray-medium)', marginTop: '0.25rem' }}>Gerencie clientes, cultura e formulários</p>
+        </div>
+        {selectedClient && (
+          <button onClick={() => setSelectedClient(null)} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, color: '#64748b' }}>
+            Voltar para Todos os Clientes
+          </button>
+        )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem' }}>
-        {/* Client list */}
-        <div>
-          <div style={cardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Clientes</h3>
-              <button onClick={loadClients} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-gray-medium)' }}>
-                <RefreshCw size={16} />
-              </button>
-            </div>
-
-            {loading ? (
-              <p style={{ color: 'var(--color-gray-medium)', fontSize: '0.875rem' }}>Carregando...</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {clients.map(client => (
-                  <div
-                    key={client.id}
-                    onClick={() => setSelectedClient(client)}
-                    style={{
-                      padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
-                      border: `2px solid ${selectedClient?.id === client.id ? 'var(--color-primary)' : '#f1f5f9'}`,
-                      background: selectedClient?.id === client.id ? 'rgba(43,151,193,0.06)' : '#fafafa',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-dark)' }}>{client.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-medium)' }}>/{client.slug}</div>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleClientStatus(client); }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: client.status === 'active' ? '#22c55e' : '#94a3b8' }}
-                        title={client.status === 'active' ? 'Inativar' : 'Ativar'}
-                      >
-                        {client.status === 'active' ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
-                      </button>
-                    </div>
-                    <span style={{
-                      display: 'inline-block', marginTop: '0.25rem', padding: '0.1rem 0.5rem',
-                      borderRadius: '99px', fontSize: '0.7rem', fontWeight: 600,
-                      background: client.status === 'active' ? '#dcfce7' : '#fee2e2',
-                      color: client.status === 'active' ? '#16a34a' : '#dc2626',
-                    }}>
-                      {client.status === 'active' ? 'Ativo' : 'Inativo'}
-                    </span>
+      {!selectedClient ? (
+        <div style={{ ...cardStyle }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Lista de Clientes</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            {clients.map(c => {
+               const branding = Array.isArray(c.client_branding) ? c.client_branding[0] : c.client_branding;
+               return (
+              <div key={c.id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', background: '#fafafa' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  {branding?.logo_url ? <img src={branding.logo_url} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px' }} /> : <LayoutDashboard size={32} color="#94a3b8" />}
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{c.name}</h3>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>/{c.slug}</span>
                   </div>
-                ))}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <button onClick={() => { setSelectedClient(c); setActiveTab('visao_geral'); }} style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', cursor: 'pointer' }}>Visão Geral</button>
+                  <button onClick={() => { setSelectedClient(c); setActiveTab('cultura'); }} style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', cursor: 'pointer' }}>Cultura</button>
+                  <button onClick={() => { setSelectedClient(c); setActiveTab('temperamento'); }} style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', cursor: 'pointer' }}>Temp.</button>
+                  <button onClick={() => { setSelectedClient(c); setActiveTab('qrcodes'); }} style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', cursor: 'pointer' }}>QR Codes</button>
+                  <button onClick={() => { setSelectedClient(c); setActiveTab('configuracoes'); }} style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', cursor: 'pointer' }}>Config</button>
+                </div>
               </div>
-            )}
+            )})}
           </div>
         </div>
-
-        {/* Right panel */}
-        <div>
-          {!selectedClient ? (
-            <div style={{ ...cardStyle, textAlign: 'center', padding: '4rem 2rem', color: 'var(--color-gray-medium)' }}>
-              <Settings size={40} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-              <p>Selecione um cliente para gerenciar</p>
+      ) : (
+        <div style={cardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>{selectedClient.name}</h2>
+              <p style={{ color: 'var(--color-gray-medium)', margin: '0.25rem 0 0' }}>Slug: {selectedClient.slug}</p>
             </div>
-          ) : (
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>{selectedClient.name}</h2>
-                  <p style={{ color: 'var(--color-gray-medium)', margin: '0.25rem 0 0' }}>Slug: {selectedClient.slug}</p>
-                </div>
+            <span style={{ padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 600, background: selectedClient.status === 'active' ? '#dcfce7' : '#fee2e2', color: selectedClient.status === 'active' ? '#16a34a' : '#dc2626' }}>
+              {selectedClient.status === 'active' ? 'Ativo' : 'Inativo'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            {tabBtn('visao_geral', 'Visão Geral')}
+            {tabBtn('cultura', 'Itens de Cultura')}
+            {tabBtn('temperamento', 'Itens de Temperamento')}
+            {tabBtn('qrcodes', 'QR Codes')}
+            {tabBtn('configuracoes', 'Configurações')}
+          </div>
+
+          {activeTab === 'visao_geral' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}><h3 style={{ margin: 0, fontSize: '2rem', color: 'var(--color-primary)' }}>{cultureItems.length}</h3><p style={{ margin: 0, color: '#64748b' }}>Itens de Cultura</p></div>
+              <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}><h3 style={{ margin: 0, fontSize: '2rem', color: 'var(--color-secondary)' }}>{tempQuestions.length}</h3><p style={{ margin: 0, color: '#64748b' }}>Perguntas de Temp.</p></div>
+              <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}><h3 style={{ margin: 0, fontSize: '2rem', color: '#10b981' }}>{formLinks.length}</h3><p style={{ margin: 0, color: '#64748b' }}>QR Codes Gerados</p></div>
+            </div>
+          )}
+
+          {activeTab === 'cultura' && (
+            <div>
+              <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
+                <input placeholder="Título do pilar" value={newItemTitle} onChange={e => setNewItemTitle(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '0.5rem' }} />
+                <textarea placeholder="Descrição (opcional)" value={newItemDesc} onChange={e => setNewItemDesc(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                <button onClick={addCultureItem} style={{ marginTop: '0.5rem', padding: '0.5rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ Adicionar Cultura</button>
               </div>
+              {cultureItems.map(item => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', border: '1px solid #f1f5f9', borderRadius: '8px', marginBottom: '0.5rem' }}>
+                  <div><strong>{item.title}</strong><div style={{ fontSize: '0.85rem', color: '#64748b' }}>{item.description}</div></div>
+                  <button onClick={() => deleteCultureItem(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16}/></button>
+                </div>
+              ))}
+            </div>
+          )}
 
-              {/* Tabs */}
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                <button style={tabBtn('clientes')} onClick={() => setActiveTab('clientes')}>Visão Geral</button>
-                <button style={tabBtn('cultura')} onClick={() => setActiveTab('cultura')}>Itens de Cultura</button>
-                <button style={tabBtn('qrcodes')} onClick={() => setActiveTab('qrcodes')}>QR Codes</button>
+          {activeTab === 'temperamento' && (
+            <div>
+              <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
+                <input placeholder="Nova pergunta de temperamento" value={newItemTitle} onChange={e => setNewItemTitle(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                <button onClick={addTempQuestion} style={{ marginTop: '0.5rem', padding: '0.5rem 1rem', background: 'var(--color-secondary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ Adicionar Pergunta</button>
               </div>
-
-              {/* Tab: Visão Geral */}
-              {activeTab === 'clientes' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                  {[
-                    { label: 'Itens de Cultura', value: cultureItems.length },
-                    { label: 'Links QR Ativos', value: formLinks.filter(f => f.is_active).length },
-                    { label: 'Status', value: selectedClient.status === 'active' ? '✅ Ativo' : '❌ Inativo' },
-                  ].map(stat => (
-                    <div key={stat.label} style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-primary)' }}>{stat.value}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--color-gray-medium)' }}>{stat.label}</div>
-                    </div>
-                  ))}
+              {tempQuestions.map(item => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', border: '1px solid #f1f5f9', borderRadius: '8px', marginBottom: '0.5rem' }}>
+                  <div><strong>{item.prompt}</strong><div style={{ fontSize: '0.85rem', color: '#64748b' }}>Múltipla escolha</div></div>
+                  <button onClick={() => deleteTempQuestion(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16}/></button>
                 </div>
-              )}
+              ))}
+            </div>
+          )}
 
-              {/* Tab: Itens de Cultura */}
-              {activeTab === 'cultura' && (
-                <div>
-                  {/* Add form */}
-                  <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
-                    <p style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.875rem' }}>Novo Item</p>
-                    <input
-                      placeholder="Título do pilar"
-                      value={newItemTitle}
-                      onChange={e => setNewItemTitle(e.target.value)}
-                      style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.875rem', marginBottom: '0.5rem', boxSizing: 'border-box' }}
-                    />
-                    <textarea
-                      placeholder="Descrição (opcional)"
-                      value={newItemDesc}
-                      onChange={e => setNewItemDesc(e.target.value)}
-                      rows={2}
-                      style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
-                    />
-                    <button
-                      onClick={addCultureItem}
-                      style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}
-                    >
-                      <Plus size={16} /> Adicionar
-                    </button>
-                  </div>
+          {activeTab === 'qrcodes' && renderLevels()}
 
-                  {/* List */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {cultureItems.map(item => (
-                      <div key={item.id} style={{ background: '#fff', border: '1px solid #f1f5f9', borderRadius: '8px', padding: '0.75rem 1rem' }}>
-                        {editingItem === item.id ? (
-                          <div>
-                            <input
-                              value={editTitle}
-                              onChange={e => setEditTitle(e.target.value)}
-                              style={{ width: '100%', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.875rem', marginBottom: '0.4rem', boxSizing: 'border-box' }}
-                            />
-                            <textarea
-                              value={editDesc}
-                              onChange={e => setEditDesc(e.target.value)}
-                              rows={2}
-                              style={{ width: '100%', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
-                            />
-                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
-                              <button onClick={() => updateCultureItem(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.75rem', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}><Check size={14} /> Salvar</button>
-                              <button onClick={() => setEditingItem(null)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.75rem', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}><X size={14} /> Cancelar</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                              <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{item.title}</div>
-                              {item.description && <div style={{ fontSize: '0.8rem', color: 'var(--color-gray-medium)', marginTop: '0.2rem' }}>{item.description}</div>}
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.25rem' }}>
-                              <button onClick={() => { setEditingItem(item.id); setEditTitle(item.title); setEditDesc(item.description ?? ''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)' }}><Edit3 size={15} /></button>
-                              <button onClick={() => deleteCultureItem(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={15} /></button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {cultureItems.length === 0 && (
-                      <p style={{ textAlign: 'center', color: 'var(--color-gray-medium)', fontSize: '0.875rem', padding: '2rem' }}>Nenhum item de cultura cadastrado</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab: QR Codes */}
-              {activeTab === 'qrcodes' && (
-                <div>
-                  <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    <button onClick={() => generateFormLink('culture_self_assessment')} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}>
-                      <QrCode size={16} /> Gerar QR Cultura
-                    </button>
-                    <button onClick={() => generateFormLink('temperament')} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1rem', background: 'var(--color-secondary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}>
-                      <QrCode size={16} /> Gerar QR Temperamento
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
-                    {formLinks.map(link => {
-                      const isCulture = link.form_type === 'culture_self_assessment';
-                      const url = `${APP_BASE_URL}/form/${isCulture ? 'cultura' : 'temperamento'}/${link.token}`;
-                      return (
-                        <div key={link.id} style={{ background: '#f8fafc', borderRadius: '10px', padding: '1rem', textAlign: 'center', border: `1px solid ${link.is_active ? '#e2e8f0' : '#fee2e2'}`, opacity: link.is_active ? 1 : 0.6 }}>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isCulture ? 'var(--color-primary)' : 'var(--color-secondary)', marginBottom: '0.75rem' }}>
-                            {isCulture ? '📋 Cultura' : '🧠 Temperamento'}
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem', padding: '0.5rem', background: '#fff', borderRadius: '6px' }}>
-                            <QRCodeSVG value={url} size={120} />
-                          </div>
-                          <div style={{ fontSize: '0.65rem', color: 'var(--color-gray-medium)', wordBreak: 'break-all', marginBottom: '0.75rem' }}>{url}</div>
-                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                            <button onClick={() => toggleFormLink(link.id, link.is_active)} style={{ background: link.is_active ? '#dcfce7' : '#f1f5f9', border: 'none', borderRadius: '6px', padding: '0.35rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', color: link.is_active ? '#16a34a' : '#64748b' }}>
-                              {link.is_active ? 'Ativo' : 'Inativo'}
-                            </button>
-                            <button onClick={() => deleteFormLink(link.id)} style={{ background: '#fee2e2', border: 'none', borderRadius: '6px', padding: '0.35rem 0.6rem', cursor: 'pointer', color: '#ef4444' }}>
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {formLinks.length === 0 && (
-                      <p style={{ color: 'var(--color-gray-medium)', fontSize: '0.875rem', gridColumn: '1/-1', textAlign: 'center', padding: '2rem' }}>
-                        Nenhum QR gerado. Use os botões acima para criar.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+          {activeTab === 'configuracoes' && (
+            <div style={{ maxWidth: '600px' }}>
+              <h3 style={{ marginBottom: '1.5rem' }}>Configurações do Cliente</h3>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Nome do Cliente</label>
+                <input disabled value={selectedClient.name} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Slug (URL)</label>
+                <input disabled value={selectedClient.slug} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Status</label>
+                <button onClick={() => toggleClientStatus(selectedClient)} style={{ padding: '0.5rem 1rem', background: selectedClient.status === 'active' ? '#fee2e2' : '#dcfce7', color: selectedClient.status === 'active' ? '#dc2626' : '#16a34a', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                  {selectedClient.status === 'active' ? 'Inativar Cliente' : 'Ativar Cliente'}
+                </button>
+              </div>
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
