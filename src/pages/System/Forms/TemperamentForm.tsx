@@ -57,7 +57,7 @@ export default function TemperamentForm() {
 
     setClientId(data.client_id);
     if (data.hierarchy_level) {
-      setRespondent(p => ({ ...p, level: data.hierarchy_level }));
+      setRespondent(p => ({ ...p, level: data.hierarchy_level || '' }));
     }
 
     // Dados do cliente

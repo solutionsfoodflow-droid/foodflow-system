@@ -57,7 +57,7 @@ export default function CultureForm() {
 
     setClientId(data.client_id);
     if (data.hierarchy_level) {
-      setRespondent(p => ({ ...p, level: data.hierarchy_level }));
+      setRespondent(p => ({ ...p, level: data.hierarchy_level || '' }));
     }
 
     // Carregar dados do cliente

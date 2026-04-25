@@ -7,6 +7,36 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       client_branding: {
@@ -32,7 +62,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "client_branding_client_id_fkey"; columns: ["client_id"]; isOneToOne: true; referencedRelation: "clients"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "client_branding_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clients: {
@@ -94,7 +130,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "culture_items_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "culture_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
         ]
       }
       culture_self_assessment_answers: {
@@ -123,8 +165,20 @@ export type Database = {
           score?: number
         }
         Relationships: [
-          { foreignKeyName: "culture_self_assessment_answers_assessment_id_fkey"; columns: ["assessment_id"]; isOneToOne: false; referencedRelation: "culture_self_assessments"; referencedColumns: ["id"] },
-          { foreignKeyName: "culture_self_assessment_answers_culture_item_id_fkey"; columns: ["culture_item_id"]; isOneToOne: false; referencedRelation: "culture_items"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "culture_self_assessment_answers_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "culture_self_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "culture_self_assessment_answers_culture_item_id_fkey"
+            columns: ["culture_item_id"]
+            isOneToOne: false
+            referencedRelation: "culture_items"
+            referencedColumns: ["id"]
+          },
         ]
       }
       culture_self_assessments: {
@@ -168,9 +222,27 @@ export type Database = {
           supervisor_name?: string | null
         }
         Relationships: [
-          { foreignKeyName: "culture_self_assessments_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "culture_self_assessments_respondent_org_unit_id_fkey"; columns: ["respondent_org_unit_id"]; isOneToOne: false; referencedRelation: "org_units"; referencedColumns: ["id"] },
-          { foreignKeyName: "culture_self_assessments_respondent_user_id_fkey"; columns: ["respondent_user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "culture_self_assessments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "culture_self_assessments_respondent_org_unit_id_fkey"
+            columns: ["respondent_org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "culture_self_assessments_respondent_user_id_fkey"
+            columns: ["respondent_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       feedback_sessions: {
@@ -214,10 +286,34 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "feedback_sessions_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "feedback_sessions_giver_id_fkey"; columns: ["giver_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
-          { foreignKeyName: "feedback_sessions_org_unit_id_fkey"; columns: ["org_unit_id"]; isOneToOne: false; referencedRelation: "org_units"; referencedColumns: ["id"] },
-          { foreignKeyName: "feedback_sessions_receiver_id_fkey"; columns: ["receiver_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "feedback_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_sessions_giver_id_fkey"
+            columns: ["giver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_sessions_org_unit_id_fkey"
+            columns: ["org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_sessions_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       org_units: {
@@ -255,8 +351,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "org_units_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "org_units_parent_unit_id_fkey"; columns: ["parent_unit_id"]; isOneToOne: false; referencedRelation: "org_units"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "org_units_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_units_parent_unit_id_fkey"
+            columns: ["parent_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -295,6 +403,7 @@ export type Database = {
           created_at: string
           expires_at: string | null
           form_type: Database["public"]["Enums"]["form_type_enum"]
+          hierarchy_level: string | null
           id: string
           is_active: boolean
           token: string
@@ -304,6 +413,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           form_type: Database["public"]["Enums"]["form_type_enum"]
+          hierarchy_level?: string | null
           id?: string
           is_active?: boolean
           token?: string
@@ -313,12 +423,19 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           form_type?: Database["public"]["Enums"]["form_type_enum"]
+          hierarchy_level?: string | null
           id?: string
           is_active?: boolean
           token?: string
         }
         Relationships: [
-          { foreignKeyName: "public_form_links_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "public_form_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ropac_records: {
@@ -371,9 +488,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "ropac_records_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "ropac_records_org_unit_id_fkey"; columns: ["org_unit_id"]; isOneToOne: false; referencedRelation: "org_units"; referencedColumns: ["id"] },
-          { foreignKeyName: "ropac_records_owner_id_fkey"; columns: ["owner_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "ropac_records_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ropac_records_org_unit_id_fkey"
+            columns: ["org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ropac_records_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       supervisor_evaluation_answers: {
@@ -402,7 +537,13 @@ export type Database = {
           score?: number | null
         }
         Relationships: [
-          { foreignKeyName: "supervisor_evaluation_answers_evaluation_id_fkey"; columns: ["evaluation_id"]; isOneToOne: false; referencedRelation: "supervisor_evaluations"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "supervisor_evaluation_answers_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "supervisor_evaluations"
+            referencedColumns: ["id"]
+          },
         ]
       }
       supervisor_evaluations: {
@@ -446,10 +587,34 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "supervisor_evaluations_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "supervisor_evaluations_evaluatee_id_fkey"; columns: ["evaluatee_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
-          { foreignKeyName: "supervisor_evaluations_evaluator_id_fkey"; columns: ["evaluator_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
-          { foreignKeyName: "supervisor_evaluations_org_unit_id_fkey"; columns: ["org_unit_id"]; isOneToOne: false; referencedRelation: "org_units"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "supervisor_evaluations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_evaluatee_id_fkey"
+            columns: ["evaluatee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_org_unit_id_fkey"
+            columns: ["org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
         ]
       }
       temperament_answers: {
@@ -478,9 +643,27 @@ export type Database = {
           submission_id?: string
         }
         Relationships: [
-          { foreignKeyName: "temperament_answers_option_id_fkey"; columns: ["option_id"]; isOneToOne: false; referencedRelation: "temperament_options"; referencedColumns: ["id"] },
-          { foreignKeyName: "temperament_answers_question_id_fkey"; columns: ["question_id"]; isOneToOne: false; referencedRelation: "temperament_questions"; referencedColumns: ["id"] },
-          { foreignKeyName: "temperament_answers_submission_id_fkey"; columns: ["submission_id"]; isOneToOne: false; referencedRelation: "temperament_submissions"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "temperament_answers_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "temperament_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temperament_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "temperament_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temperament_answers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "temperament_submissions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       temperament_options: {
@@ -509,7 +692,13 @@ export type Database = {
           weight?: number
         }
         Relationships: [
-          { foreignKeyName: "temperament_options_question_id_fkey"; columns: ["question_id"]; isOneToOne: false; referencedRelation: "temperament_questions"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "temperament_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "temperament_questions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       temperament_questionnaires: {
@@ -541,7 +730,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "temperament_questionnaires_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "temperament_questionnaires_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
         ]
       }
       temperament_questions: {
@@ -570,7 +765,13 @@ export type Database = {
           questionnaire_id?: string
         }
         Relationships: [
-          { foreignKeyName: "temperament_questions_questionnaire_id_fkey"; columns: ["questionnaire_id"]; isOneToOne: false; referencedRelation: "temperament_questionnaires"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "temperament_questions_questionnaire_id_fkey"
+            columns: ["questionnaire_id"]
+            isOneToOne: false
+            referencedRelation: "temperament_questionnaires"
+            referencedColumns: ["id"]
+          },
         ]
       }
       temperament_submissions: {
@@ -617,10 +818,34 @@ export type Database = {
           submitted_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: "temperament_submissions_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "temperament_submissions_questionnaire_id_fkey"; columns: ["questionnaire_id"]; isOneToOne: false; referencedRelation: "temperament_questionnaires"; referencedColumns: ["id"] },
-          { foreignKeyName: "temperament_submissions_respondent_org_unit_id_fkey"; columns: ["respondent_org_unit_id"]; isOneToOne: false; referencedRelation: "org_units"; referencedColumns: ["id"] },
-          { foreignKeyName: "temperament_submissions_respondent_user_id_fkey"; columns: ["respondent_user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "temperament_submissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temperament_submissions_questionnaire_id_fkey"
+            columns: ["questionnaire_id"]
+            isOneToOne: false
+            referencedRelation: "temperament_questionnaires"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temperament_submissions_respondent_org_unit_id_fkey"
+            columns: ["respondent_org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temperament_submissions_respondent_user_id_fkey"
+            columns: ["respondent_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_client_roles: {
@@ -652,8 +877,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          { foreignKeyName: "user_client_roles_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "user_client_roles_user_id_fkey"; columns: ["user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "user_client_roles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_client_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_org_assignments: {
@@ -688,70 +925,234 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          { foreignKeyName: "user_org_assignments_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "user_org_assignments_org_unit_id_fkey"; columns: ["org_unit_id"]; isOneToOne: false; referencedRelation: "org_units"; referencedColumns: ["id"] },
-          { foreignKeyName: "user_org_assignments_user_id_fkey"; columns: ["user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+          {
+            foreignKeyName: "user_org_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_org_assignments_org_unit_id_fkey"
+            columns: ["org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_org_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
-    Views: { [_ in never]: never }
+    Views: {
+      [_ in never]: never
+    }
     Functions: {
-      fn_get_descendant_unit_ids: { Args: { p_unit_id: string }; Returns: { unit_id: string }[] }
-      fn_get_user_client_role: { Args: { p_client_id: string }; Returns: Database["public"]["Enums"]["client_role_enum"] }
-      fn_get_user_global_role: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["global_role_enum"] }
-      fn_get_user_primary_client_id: { Args: Record<PropertyKey, never>; Returns: string }
-      fn_get_user_primary_org_unit_id: { Args: { p_client_id: string }; Returns: string }
-      fn_is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      fn_get_descendant_unit_ids: {
+        Args: { p_unit_id: string }
+        Returns: {
+          unit_id: string
+        }[]
+      }
+      fn_get_my_client_ids: { Args: never; Returns: string[] }
+      fn_get_my_roles: {
+        Args: never
+        Returns: Database["public"]["Enums"]["client_role_enum"][]
+      }
+      fn_get_user_client_role: {
+        Args: { p_client_id: string }
+        Returns: Database["public"]["Enums"]["client_role_enum"]
+      }
+      fn_get_user_global_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["global_role_enum"]
+      }
+      fn_get_user_primary_client_id: { Args: never; Returns: string }
+      fn_get_user_primary_org_unit_id: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
+      fn_is_platform_admin: { Args: never; Returns: boolean }
+      is_platform_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      client_role_enum: "client_ceo" | "client_manager" | "client_coordinator" | "client_supervisor" | "employee_respondent"
+      client_role_enum:
+        | "client_ceo"
+        | "client_manager"
+        | "client_coordinator"
+        | "client_supervisor"
+        | "employee_respondent"
       client_status_enum: "active" | "inactive" | "suspended"
       form_type_enum: "culture_self_assessment" | "temperament"
       global_role_enum: "platform_admin"
-      org_unit_type_enum: "company" | "management" | "coordination" | "supervision"
+      org_unit_type_enum:
+        | "company"
+        | "management"
+        | "coordination"
+        | "supervision"
       user_client_status_enum: "active" | "inactive" | "pending"
     }
-    CompositeTypes: { [_ in never]: never }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
 
-// ── Helpers de conveniência ──────────────────────────────────
-export type Tables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Row"]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-export type TablesInsert<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Insert"]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
-export type TablesUpdate<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Update"]
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
-export type Enums<T extends keyof Database["public"]["Enums"]> =
-  Database["public"]["Enums"][T]
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
-// ── Aliases úteis ────────────────────────────────────────────
-export type Client              = Tables<"clients">
-export type ClientBranding      = Tables<"client_branding">
-export type Profile             = Tables<"profiles">
-export type UserClientRole      = Tables<"user_client_roles">
-export type OrgUnit             = Tables<"org_units">
-export type UserOrgAssignment   = Tables<"user_org_assignments">
-export type CultureItem         = Tables<"culture_items">
-export type CultureAssessment   = Tables<"culture_self_assessments">
-export type CultureAnswer       = Tables<"culture_self_assessment_answers">
-export type TemperamentQ        = Tables<"temperament_questionnaires">
-export type TemperamentQuestion = Tables<"temperament_questions">
-export type TemperamentOption   = Tables<"temperament_options">
-export type TemperamentSub      = Tables<"temperament_submissions">
-export type TemperamentAnswer   = Tables<"temperament_answers">
-export type SupervisorEval      = Tables<"supervisor_evaluations">
-export type FeedbackSession     = Tables<"feedback_sessions">
-export type RopacRecord         = Tables<"ropac_records">
-export type PublicFormLink      = Tables<"public_form_links">
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
 
-// ── Enums como tipos ─────────────────────────────────────────
-export type GlobalRole         = Enums<"global_role_enum">
-export type ClientRole         = Enums<"client_role_enum">
-export type ClientStatus       = Enums<"client_status_enum">
-export type OrgUnitType        = Enums<"org_unit_type_enum">
-export type FormType           = Enums<"form_type_enum">
-export type UserClientStatus   = Enums<"user_client_status_enum">
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      client_role_enum: [
+        "client_ceo",
+        "client_manager",
+        "client_coordinator",
+        "client_supervisor",
+        "employee_respondent",
+      ],
+      client_status_enum: ["active", "inactive", "suspended"],
+      form_type_enum: ["culture_self_assessment", "temperament"],
+      global_role_enum: ["platform_admin"],
+      org_unit_type_enum: [
+        "company",
+        "management",
+        "coordination",
+        "supervision",
+      ],
+      user_client_status_enum: ["active", "inactive", "pending"],
+    },
+  },
+} as const
+
+export type Client = Database['public']['Tables']['clients']['Row'];
+export type CultureItem = Database['public']['Tables']['culture_items']['Row'];
+export type TemperamentQuestion = Database['public']['Tables']['temperament_questions']['Row'];
+export type TemperamentOption = Database['public']['Tables']['temperament_options']['Row'];
+export type OrgUnit = Database['public']['Tables']['org_units']['Row'];
+export type OrgUnitType = Database['public']['Enums']['org_unit_type_enum'];
+export type GlobalRole = Database['public']['Enums']['global_role_enum'];
+export type ClientRole = Database['public']['Enums']['client_role_enum'];
+

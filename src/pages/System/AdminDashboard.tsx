@@ -1,33 +1,29 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Client, CultureItem } from '../../types/database';
-import { Plus, Settings, QrCode, RefreshCw, Trash2, Edit3, Check, X, ToggleLeft, ToggleRight, LayoutDashboard, Brain, Copy } from 'lucide-react';
+import { Trash2, LayoutDashboard, Copy } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 const APP_BASE_URL = window.location.origin;
 
 type TabType = 'visao_geral' | 'cultura' | 'temperamento' | 'qrcodes' | 'configuracoes';
 
+type ClientWithBranding = Client & { client_branding?: { logo_url?: string | null } | { logo_url?: string | null }[] | null };
+
 export default function AdminDashboard() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clients, setClients] = useState<ClientWithBranding[]>([]);
+  const [selectedClient, setSelectedClient] = useState<ClientWithBranding | null>(null);
   const [cultureItems, setCultureItems] = useState<CultureItem[]>([]);
   const [tempQuestions, setTempQuestions] = useState<any[]>([]);
   const [formLinks, setFormLinks] = useState<{ id: string; form_type: string; token: string; is_active: boolean; hierarchy_level: string }[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('visao_geral');
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDesc, setNewItemDesc] = useState('');
-  const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDesc, setEditDesc] = useState('');
 
   // ── Loaders ─────────────────────────────────────────────────
   async function loadClients() {
-    setLoading(true);
     const { data } = await supabase.from('clients').select('*, client_branding(logo_url)').order('name');
-    setClients(data ?? []);
-    setLoading(false);
+    setClients(data as any ?? []);
   }
 
   async function loadCultureItems(clientId: string) {
@@ -50,7 +46,7 @@ export default function AdminDashboard() {
 
   async function loadFormLinks(clientId: string) {
     const { data } = await supabase.from('public_form_links').select('*').eq('client_id', clientId);
-    setFormLinks(data ?? []);
+    setFormLinks((data ?? []).map(l => ({ ...l, hierarchy_level: l.hierarchy_level || 'operacional' })));
   }
 
   useEffect(() => { loadClients(); }, []);
@@ -78,11 +74,6 @@ export default function AdminDashboard() {
     setNewItemTitle(''); setNewItemDesc(''); loadCultureItems(selectedClient.id);
   }
 
-  async function updateCultureItem(id: string) {
-    await supabase.from('culture_items').update({ title: editTitle, description: editDesc || null, updated_at: new Date().toISOString() }).eq('id', id);
-    setEditingItem(null); if (selectedClient) loadCultureItems(selectedClient.id);
-  }
-
   async function deleteCultureItem(id: string) {
     if (!confirm('Excluir?')) return;
     await supabase.from('culture_items').delete().eq('id', id);
@@ -104,7 +95,7 @@ export default function AdminDashboard() {
     if (selectedClient) loadTempQuestions(selectedClient.id);
   }
 
-  async function generateFormLink(formType: string, level: string) {
+  async function generateFormLink(formType: "culture_self_assessment" | "temperament", level: string) {
     if (!selectedClient) return;
     await supabase.from('public_form_links').insert({ client_id: selectedClient.id, form_type: formType, is_active: true, hierarchy_level: level });
     loadFormLinks(selectedClient.id);
