@@ -129,7 +129,8 @@ export default function CultureForm() {
     setSubmitting(false);
   }
 
-  const allAnswered = cultureItems.length > 0 && cultureItems.every(i => answers[i.id]?.score > 0);
+  const answeredCount = cultureItems.filter(i => answers[i.id]?.score > 0).length;
+  const allAnswered = cultureItems.length > 0 && answeredCount === cultureItems.length;
   const infoComplete = respondent.name.trim() && respondent.level;
 
   // ── Renders ──────────────────────────────────────────────────
@@ -210,18 +211,13 @@ export default function CultureForm() {
                 value={respondent.level}
                 onChange={e => setRespondent(p => ({ ...p, level: e.target.value }))}
                 style={{ width: '100%', padding: '0.7rem 0.875rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.95rem', background: respondent.level ? '#f8fafc' : '#fff' }}
-                disabled={!!respondent.level}
               >
                 <option value="">Selecione...</option>
+                <option value="operacional">Operacional</option>
                 <option value="supervisor">Supervisor</option>
                 <option value="coordenador">Coordenador</option>
                 <option value="gerente">Gerente</option>
-                <option value="operacional">Operacional</option>
-                <option value="client_supervisor">Supervisor (Antigo)</option>
-                <option value="client_coordinator">Coordenador (Antigo)</option>
-                <option value="client_manager">Gerente (Antigo)</option>
-                <option value="client_ceo">CEO / Diretoria</option>
-                <option value="employee_respondent">Colaborador</option>
+                <option value="ceo">CEO / Diretoria</option>
               </select>
             </div>
           </div>
@@ -245,9 +241,14 @@ export default function CultureForm() {
 
       {step === 'form' && (
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.25rem', color: 'var(--color-dark)' }}>
-            Avalie cada pilar cultural
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-dark)', margin: 0 }}>
+              Avalie cada pilar cultural
+            </h2>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: allAnswered ? '#16a34a' : 'var(--color-primary)', background: allAnswered ? '#dcfce7' : '#e0f2fe', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+              {answeredCount} de {cultureItems.length} respondidos
+            </span>
+          </div>
           <div style={{ color: 'var(--color-gray-medium)', fontSize: '0.85rem', marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             <span style={{background: '#fee2e2', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#991b1b', fontSize: '0.75rem', fontWeight: 600}}>1 = Péssimo</span>
             <span style={{background: '#ffedd5', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#9a3412', fontSize: '0.75rem', fontWeight: 600}}>2 = Ruim</span>
@@ -303,19 +304,22 @@ export default function CultureForm() {
             >
               Voltar
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!allAnswered || submitting}
-              style={{
-                flex: 1, padding: '0.85rem',
-                background: allAnswered && !submitting ? 'var(--color-primary)' : '#e2e8f0',
-                color: allAnswered && !submitting ? '#fff' : '#94a3b8',
-                border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: 600,
-                cursor: allAnswered && !submitting ? 'pointer' : 'not-allowed',
-              }}
-            >
-              {submitting ? 'Enviando...' : 'Enviar Avaliação'}
-            </button>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <button
+                onClick={handleSubmit}
+                disabled={!allAnswered || submitting}
+                style={{
+                  width: '100%', padding: '0.85rem',
+                  background: allAnswered && !submitting ? 'var(--color-primary)' : '#e2e8f0',
+                  color: allAnswered && !submitting ? '#fff' : '#94a3b8',
+                  border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: 600,
+                  cursor: allAnswered && !submitting ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {submitting ? 'Enviando...' : 'Enviar Avaliação'}
+              </button>
+              {!allAnswered && <span style={{ fontSize: '0.75rem', color: '#ef4444', textAlign: 'center', marginTop: '0.4rem', fontWeight: 600 }}>Responda a todos os itens antes de enviar.</span>}
+            </div>
           </div>
         </div>
       )}

@@ -21,6 +21,7 @@ export default function ClientDashboard() {
 
   const [viewRole, setViewRole] = useState<ViewRole>(isAdmin ? 'client_ceo' : ((clientRole as ViewRole) ?? 'client_ceo'));
   const [activeTab, setActiveTab] = useState<'unidades' | 'dashboards' | 'relatorios'>('unidades');
+  const [filterLevel, setFilterLevel] = useState<string>('all');
 
   const [clientName, setClientName] = useState('');
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([]);
@@ -39,7 +40,7 @@ export default function ClientDashboard() {
     if (!activeClientId) return;
     loadClientData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeClientId, viewRole]);
+  }, [activeClientId, viewRole, filterLevel]);
 
   async function loadClientData() {
     setLoading(true);
@@ -56,7 +57,7 @@ export default function ClientDashboard() {
       supabase.from('temperament_submissions').select('id', { count: 'exact', head: true }).eq('client_id', activeClientId),
       supabase.from('org_units').select('id', { count: 'exact', head: true }).eq('client_id', activeClientId).eq('is_active', true),
       supabase.from('culture_self_assessments').select('id, respondent_name, respondent_level, submitted_at, respondent_org_unit_id').eq('client_id', activeClientId).order('submitted_at', { ascending: false }).limit(20),
-      supabase.from('culture_self_assessment_answers').select('score, justification_text, culture_item_id, culture_items(title), culture_self_assessments!inner(client_id)').eq('culture_self_assessments.client_id', activeClientId)
+      supabase.from('culture_self_assessment_answers').select('score, justification_text, culture_item_id, culture_items(title), culture_self_assessments!inner(client_id, respondent_level)').eq('culture_self_assessments.client_id', activeClientId)
     ]);
 
     setStats({ cultureResponses: cultureRes.count ?? 0, temperamentResponses: temperamentRes.count ?? 0, orgUnits: orgRes.count ?? 0 });
@@ -68,6 +69,9 @@ export default function ClientDashboard() {
     const justs: any[] = [];
 
     answers.forEach(ans => {
+      // Filtro de nível
+      if (filterLevel !== 'all' && ans.culture_self_assessments?.respondent_level !== filterLevel) return;
+
       const title = ans.culture_items?.title || 'Desconhecido';
       const score = ans.score;
       
@@ -171,7 +175,21 @@ export default function ClientDashboard() {
 
           {activeTab === 'dashboards' && (
             <div style={cardStyle}>
-              <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Dashboards Executivos</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Dashboards Executivos</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>Filtrar Nível:</label>
+                  <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                    <option value="all">Todos</option>
+                    <option value="operacional">Operacional</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="coordenador">Coordenador</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="ceo">CEO / Diretoria</option>
+                  </select>
+                </div>
+              </div>
+
               {stats.cultureResponses === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                    <TrendingUp size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />

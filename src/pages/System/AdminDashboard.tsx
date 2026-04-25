@@ -20,6 +20,11 @@ export default function AdminDashboard() {
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDesc, setNewItemDesc] = useState('');
 
+  // Estados de Edição
+  const [editingItem, setEditingItem] = useState<CultureItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+
   // Estados para Cópia de Itens
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [copySourceClientId, setCopySourceClientId] = useState('');
@@ -95,17 +100,35 @@ export default function AdminDashboard() {
     if (!selectedClient) return;
     setCopyingItem(true);
     const maxOrder = cultureItems.length > 0 ? Math.max(...cultureItems.map(i => i.display_order)) + 1 : 1;
-    await supabase.from('culture_items').insert({ 
+    const { data } = await supabase.from('culture_items').insert({ 
       client_id: selectedClient.id, 
       title: sourceItem.title, 
       description: sourceItem.description, 
       display_order: maxOrder, 
       is_active: true,
       copied_from_item_id: sourceItem.id
-    });
+    }).select().single();
+    
     await loadCultureItems(selectedClient.id);
     setCopyingItem(false);
     setShowCopyModal(false);
+    
+    if (data) {
+      setEditingItem(data);
+      setEditTitle(data.title);
+      setEditDesc(data.description || '');
+    }
+  }
+
+  async function updateCultureItem() {
+    if (!editingItem || !selectedClient) return;
+    await supabase.from('culture_items').update({
+      title: editTitle.trim(),
+      description: editDesc.trim() || null,
+      updated_at: new Date().toISOString()
+    }).eq('id', editingItem.id);
+    setEditingItem(null);
+    loadCultureItems(selectedClient.id);
   }
 
   async function addTempQuestion() {
@@ -123,9 +146,9 @@ export default function AdminDashboard() {
     if (selectedClient) loadTempQuestions(selectedClient.id);
   }
 
-  async function generateFormLink(formType: "culture_self_assessment" | "temperament", level: string) {
+  async function generateFormLink(formType: "culture_self_assessment" | "temperament") {
     if (!selectedClient) return;
-    await supabase.from('public_form_links').insert({ client_id: selectedClient.id, form_type: formType, is_active: true, hierarchy_level: level });
+    await supabase.from('public_form_links').insert({ client_id: selectedClient.id, form_type: formType, is_active: true, hierarchy_level: '' });
     loadFormLinks(selectedClient.id);
   }
 
@@ -146,17 +169,17 @@ export default function AdminDashboard() {
     <button style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', background: activeTab === tab ? 'var(--color-primary)' : '#f1f5f9', color: activeTab === tab ? '#fff' : '#64748b' }} onClick={() => setActiveTab(tab)}>{label}</button>
   );
 
-  const renderLevels = () => {
-    const levels = ['operacional', 'supervisor', 'coordenador', 'gerente'];
-    return levels.map(level => (
-      <div key={level} style={{ marginBottom: '2rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-        <h3 style={{ textTransform: 'capitalize', margin: '0 0 1rem', color: 'var(--color-dark)', fontSize: '1.1rem' }}>Nível: {level}</h3>
+  const renderLinks = () => {
+    return (
+      <div style={{ marginBottom: '2rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+        <h3 style={{ margin: '0 0 1rem', color: 'var(--color-dark)', fontSize: '1.1rem' }}>QR Codes Únicos</h3>
+        <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>O nível do respondente será solicitado dentro do formulário.</p>
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
-          <button onClick={() => generateFormLink('culture_self_assessment', level)} style={{ padding: '0.5rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>+ QR Cultura</button>
-          <button onClick={() => generateFormLink('temperament', level)} style={{ padding: '0.5rem 1rem', background: 'var(--color-secondary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>+ QR Temperamento</button>
+          <button onClick={() => generateFormLink('culture_self_assessment')} style={{ padding: '0.5rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>+ QR Cultura</button>
+          <button onClick={() => generateFormLink('temperament')} style={{ padding: '0.5rem 1rem', background: 'var(--color-secondary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>+ QR Temperamento</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
-          {formLinks.filter(l => l.hierarchy_level === level).map(link => {
+          {formLinks.map(link => {
             const isCulture = link.form_type === 'culture_self_assessment';
             const url = `${APP_BASE_URL}/form/${isCulture ? 'cultura' : 'temperamento'}/${link.token}`;
             return (
@@ -178,10 +201,10 @@ export default function AdminDashboard() {
               </div>
             );
           })}
-          {formLinks.filter(l => l.hierarchy_level === level).length === 0 && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Nenhum QR Code gerado para este nível.</p>}
+          {formLinks.length === 0 && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Nenhum QR Code gerado para este cliente.</p>}
         </div>
       </div>
-    ));
+    );
   };
 
   return (
@@ -262,10 +285,16 @@ export default function AdminDashboard() {
                 <textarea placeholder="Descrição (opcional)" value={newItemDesc} onChange={e => setNewItemDesc(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
                 <button onClick={addCultureItem} style={{ marginTop: '0.5rem', padding: '0.5rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ Adicionar Cultura</button>
               </div>
-              {cultureItems.map(item => (
+              {cultureItems.map((item, idx) => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', border: '1px solid #f1f5f9', borderRadius: '8px', marginBottom: '0.5rem' }}>
-                  <div><strong>{item.title}</strong><div style={{ fontSize: '0.85rem', color: '#64748b' }}>{item.description}</div></div>
-                  <button onClick={() => deleteCultureItem(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16}/></button>
+                  <div>
+                    <strong style={{ fontSize: '0.9rem' }}>{idx + 1}. {item.title}</strong>
+                    {item.description && <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.2rem' }}>{item.description}</div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <button onClick={() => { setEditingItem(item); setEditTitle(item.title); setEditDesc(item.description || ''); }} style={{ padding: '0.35rem 0.6rem', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>Editar</button>
+                    <button onClick={() => deleteCultureItem(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16}/></button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -286,7 +315,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {activeTab === 'qrcodes' && renderLevels()}
+          {activeTab === 'qrcodes' && renderLinks()}
 
           {activeTab === 'configuracoes' && (
             <div style={{ maxWidth: '600px' }}>
@@ -307,6 +336,27 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal de Edição de Cultura */}
+      {editingItem && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '2rem', width: '100%', maxWidth: '500px' }}>
+            <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem' }}>Editar Item de Cultura</h2>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Título</label>
+              <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+            </div>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Descrição</label>
+              <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={4} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setEditingItem(null)} style={{ padding: '0.75rem 1.5rem', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+              <button onClick={updateCultureItem} style={{ padding: '0.75rem 1.5rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Salvar</button>
+            </div>
+          </div>
         </div>
       )}
 
